@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Receipt Generator</title>
+<style>
+  :root {
+    --purple: #6D28D9;
+    --purple-dark: #5B21B6;
+    --purple-light: #F5F3FF;
+    --purple-border: #DDD6FE;
+    --ink: #1F2430;
+    --muted: #6B7280;
+    --line: #E5E7EB;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+    background: #F4F5F7;
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 28px 20px 60px; }
+  .top-title { font-size: 22px; font-weight: 800; margin: 0 0 2px; }
+  .top-sub { color: var(--muted); margin: 0 0 22px; font-size: 14px; }
+
+  .app { display: grid; grid-template-columns: 360px 1fr; gap: 22px; align-items: start; }
+  @media (max-width: 880px) { .app { grid-template-columns: 1fr; } }
+
+  .panel { background: #fff; border-radius: 14px; padding: 22px; box-shadow: 0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.08); }
+  .panel h2 { font-size: 15px; margin: 0 0 14px; }
+
+  .section-title { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--purple); margin: 18px 0 10px; padding-top: 14px; border-top: 1px solid var(--line); }
+  .section-title.first { border-top: none; margin-top: 0; padding-top: 0; }
+
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 12.5px; font-weight: 600; color: #374151; margin-bottom: 4px; }
+  .field input, .field textarea { width: 100%; padding: 9px 11px; border: 1px solid #D8DBE2; border-radius: 8px; font-size: 14px; font-family: inherit; }
+  .field input:focus, .field textarea:focus { outline: none; border-color: var(--purple); box-shadow: 0 0 0 3px rgba(109,40,217,.12); }
+  .field-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .field-row-2 .field { margin-bottom: 0; }
+  .currency-note-row { display: grid; grid-template-columns: 90px 1fr; gap: 10px; }
+
+  .items-head { display: grid; grid-template-columns: 1fr 52px 72px 26px; gap: 6px; font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; padding: 0 2px 6px; }
+  .item-row { display: grid; grid-template-columns: 1fr 52px 72px 26px; gap: 6px; margin-bottom: 8px; align-items: center; }
+  .item-row input { padding: 8px 9px; border: 1px solid #D8DBE2; border-radius: 7px; font-size: 13px; width: 100%; font-family: inherit; }
+  .item-row input:focus { outline: none; border-color: var(--purple); box-shadow: 0 0 0 3px rgba(109,40,217,.12); }
+  .btn-remove { background: #FEF2F2; color: #DC2626; border: 1px solid #FCA5A5; border-radius: 7px; height: 34px; cursor: pointer; font-size: 14px; line-height: 1; }
+  .btn-remove:hover { background: #FEE2E2; }
+  .btn-remove:disabled { opacity: .3; cursor: not-allowed; }
+
+  .btn-add { width: 100%; padding: 9px; border: 1.5px dashed var(--purple-border); background: var(--purple-light); color: var(--purple); border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+  .btn-add:hover { background: #EDE4FB; }
+
+  .toolbar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .toolbar button { flex: 1; min-width: 96px; padding: 10px 10px; border-radius: 9px; border: none; font-weight: 600; font-size: 13px; cursor: pointer; font-family: inherit; }
+  #btnPng, #btnPdf { background: var(--purple); color: #fff; }
+  #btnPng:hover, #btnPdf:hover { background: var(--purple-dark); }
+  #btnCopy { background: #fff; color: var(--purple); border: 1.5px solid var(--purple-border); }
+  #btnCopy:hover { background: var(--purple-light); }
+  .toolbar button:disabled { opacity: .6; cursor: not-allowed; }
+
+  .receipt-wrap { overflow-x: auto; padding: 18px 0; background: #EFEFF3; border-radius: 12px; }
+  .receipt { width: 600px; margin: 0 auto; background: #fff; padding: 42px 46px; box-shadow: 0 1px 6px rgba(0,0,0,.08); }
+
+  .r-header h1 { color: var(--purple); font-size: 30px; margin: 0 0 18px; font-weight: 800; }
+  .r-meta { display: flex; gap: 40px; font-size: 13.5px; margin-bottom: 24px; }
+  .r-meta b { display: inline-block; width: 84px; color: #374151; }
+
+  .r-parties { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 26px; }
+  .party-box { background: var(--purple-light); border-radius: 10px; padding: 14px 16px; }
+  .party-box h3 { color: var(--purple); font-size: 12px; text-transform: uppercase; letter-spacing: .03em; margin: 0 0 8px; font-weight: 700; }
+  .party-name { font-weight: 700; font-size: 14px; margin-bottom: 3px; color: var(--ink); }
+  .party-box div.line { font-size: 12.5px; color: #4B5563; line-height: 1.55; }
+
+  table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
+  th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); border-bottom: 2px solid #111827; padding: 0 0 8px; font-weight: 700; }
+  td { padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; vertical-align: top; }
+  .center { text-align: center; }
+  .right { text-align: right; }
+  .amount { color: var(--purple-dark); font-weight: 600; white-space: nowrap; }
+
+  .r-total-row { display: flex; justify-content: space-between; align-items: center; background: var(--purple-light); padding: 13px 16px; border-radius: 9px; margin-top: 12px; font-weight: 800; font-size: 16px; }
+
+  .r-note { margin-top: 22px; padding-top: 16px; border-top: 1px dashed var(--line); font-size: 12.5px; color: var(--muted); font-style: italic; }
+
+  #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(16px); background: #111827; color: #fff; padding: 11px 20px; border-radius: 8px; font-size: 13.5px; opacity: 0; pointer-events: none; transition: all .25s ease; z-index: 999; box-shadow: 0 4px 14px rgba(0,0,0,.2); }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 480px) {
+    .receipt { padding: 28px 22px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top-title">🧾 Receipt Generator</div>
+  <div class="top-sub">Fill in the details on the left — your receipt updates live on the right.</div>
+
+  <div class="app">
+    <div class="panel">
+      <h2>Receipt Details</h2>
+
+      <div class="field-row-2">
+        <div class="field">
+          <label for="receiptNo">Receipt No.</label>
+          <input type="text" id="receiptNo" class="live-input" value="R-0001">
+        </div>
+        <div class="field">
+          <label for="receiptDate">Date</label>
+          <input type="date" id="receiptDate" class="live-input">
+        </div>
+      </div>
+
+      <div class="section-title first">From (You)</div>
+      <div class="field">
+        <label for="fromName">Your Name</label>
+        <input type="text" id="fromName" class="live-input" placeholder="Your Name">
+      </div>
+      <div class="field">
+        <label for="fromPhone">Phone</label>
+        <input type="text" id="fromPhone" class="live-input" placeholder="+91 90000 00000">
+      </div>
+
+      <div class="section-title">Bill To (Customer)</div>
+      <div class="field">
+        <label for="toName">Customer Name</label>
+        <input type="text" id="toName" class="live-input" placeholder="Client Name">
+      </div>
+      <div class="field">
+        <label for="toAddress">Address</label>
+        <input type="text" id="toAddress" class="live-input" placeholder="City, State">
+      </div>
+      <div class="field">
+        <label for="toPhone">Phone</label>
+        <input type="text" id="toPhone" class="live-input" placeholder="+91 90000 00000">
+      </div>
+
+      <div class="section-title">Items</div>
+      <div class="items-head">
+        <span>Item</span><span class="center">Qty</span><span class="right">Price</span><span></span>
+      </div>
+      <div id="itemsForm"></div>
+      <button type="button" class="btn-add" onclick="addItem()">+ Add Item</button>
+
+      <div class="section-title">Other</div>
+      <div class="currency-note-row">
+        <div class="field">
+          <label for="currency">Currency</label>
+          <input type="text" id="currency" class="live-input" value="₹" maxlength="4">
+        </div>
+        <div class="field">
+          <label for="note">Note (optional)</label>
+          <input type="text" id="note" class="live-input" placeholder="Thank you for your business!">
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="toolbar">
+        <button type="button" id="btnPng" onclick="downloadPNG()">⬇ Download PNG</button>
+        <button type="button" id="btnPdf" onclick="downloadPDF()">⬇ Download PDF</button>
+        <button type="button" id="btnCopy" onclick="copyImage()">⧉ Copy Image</button>
+      </div>
+      <div class="receipt-wrap">
+        <div class="receipt" id="receipt"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/4.2.1/jspdf.umd.min.js"></script>
+<script>
+  let items = [{ id: 1, name: '', qty: 1, price: 0 }];
+  let itemIdCounter = 2;
+
+  function val(id) { return document.getElementById(id).value.trim(); }
+
+  function esc(str) {
+    const div = document.createElement('div');
+    div.textContent = str == null ? '' : String(str);
+    return div.innerHTML;
+  }
+
+  function fmt(num) {
+    const n = Number(num) || 0;
+    return n.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  }
+
+  function formatDate(dateStr) {
+    if (!dateStr) return '';
+    const d = new Date(dateStr + 'T00:00:00');
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+  }
+
+  function addItem() {
+    items.push({ id: itemIdCounter++, name: '', qty: 1, price: 0 });
+    renderItemsForm();
+    renderPreview();
+  }
+
+  function removeItem(id) {
+    if (items.length <= 1) return;
+    items = items.filter(i => i.id !== id);
+    renderItemsForm();
+    renderPreview();
+  }
+
+  function updateItem(id, field, value) {
+    const item = items.find(i => i.id === id);
+    if (!item) return;
+    if (field === 'qty' || field === 'price') {
+      item[field] = parseFloat(value);
+      if (isNaN(item[field])) item[field] = 0;
+    } else {
+      item[field] = value;
+    }
+    renderPreview();
+  }
+
+  function renderItemsForm() {
+    const html = items.map(item => `
+      <div class="item-row" data-id="${item.id}">
+        <input type="text" placeholder="Service / product" value="${esc(item.name)}" oninput="updateItem(${item.id},'name',this.value)">
+        <input type="number" min="0" step="1" value="${item.qty}" oninput="updateItem(${item.id},'qty',this.value)">
+        <input type="number" min="0" step="0.01" value="${item.price}" oninput="updateItem(${item.id},'price',this.value)">
+        <button type="button" class="btn-remove" onclick="removeItem(${item.id})" ${items.length <= 1 ? 'disabled' : ''}>✕</button>
+      </div>
+    `).join('');
+    document.getElementById('itemsForm').innerHTML = html;
+  }
+
+  function renderPreview() {
+    const fromName = val('fromName') || 'Your Name';
+    const fromPhone = val('fromPhone');
+    const toName = val('toName') || 'Client Name';
+    const toAddress = val('toAddress');
+    const toPhone = val('toPhone');
+    const receiptNo = val('receiptNo');
+    const date = formatDate(val('receiptDate'));
+    const currency = val('currency') || '₹';
+    const note = val('note');
+
+    const total = items.reduce((sum, i) => sum + (Number(i.qty) || 0) * (Number(i.price) || 0), 0);
+
+    const rowsHtml = items.map(i => `
+      <tr>
+        <td>${esc(i.name) || '—'}</td>
+        <td class="center">${Number(i.qty) || 0}</td>
+        <td class="right">${currency}${fmt(i.price)}</td>
+        <td class="right amount">${currency}${fmt((Number(i.qty) || 0) * (Number(i.price) || 0))}</td>
+      </tr>
+    `).join('');
+
+    document.getElementById('receipt').innerHTML = `
+      <div class="r-header">
+        <h1>Receipt</h1>
+        <div class="r-meta">
+          <div><b>Receipt No</b>${esc(receiptNo)}</div>
+          <div><b>Date</b>${date}</div>
+        </div>
+      </div>
+      <div class="r-parties">
+        <div class="party-box">
+          <h3>From</h3>
+          <div class="party-name">${esc(fromName)}</div>
+          ${fromPhone ? `<div class="line">Phone: ${esc(fromPhone)}</div>` : ''}
+        </div>
+        <div class="party-box">
+          <h3>Billed To</h3>
+          <div class="party-name">${esc(toName)}</div>
+          ${toAddress ? `<div class="line">${esc(toAddress)}</div>` : ''}
+          ${toPhone ? `<div class="line">Phone: ${esc(toPhone)}</div>` : ''}
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr><th>Item</th><th class="center">Qty</th><th class="right">Price</th><th class="right">Amount</th></tr>
+        </thead>
+        <tbody>${rowsHtml}</tbody>
+      </table>
+      <div class="r-total-row"><span>Total</span><span>${currency}${fmt(total)}</span></div>
+      ${note ? `<div class="r-note">${esc(note)}</div>` : ''}
+    `;
+  }
+
+  function showToast(msg) {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(window._toastTimer);
+    window._toastTimer = setTimeout(() => toast.classList.remove('show'), 2600);
+  }
+
+  async function withLoading(btnId, label, fn) {
+    const btn = document.getElementById(btnId);
+    const original = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = label;
+    try {
+      await fn();
+    } catch (err) {
+      console.error(err);
+      showToast('Something went wrong — please try again.');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = original;
+    }
+  }
+
+  function checkLibs() {
+    if (typeof html2canvas === 'undefined') {
+      showToast('Export library failed to load. Check your connection and refresh.');
+      return false;
+    }
+    return true;
+  }
+
+  function downloadPNG() {
+    if (!checkLibs()) return;
+    withLoading('btnPng', 'Generating…', async () => {
+      const canvas = await html2canvas(document.getElementById('receipt'), { scale: 2, backgroundColor: '#ffffff' });
+      const link = document.createElement('a');
+      link.download = `receipt-${val('receiptNo') || 'draft'}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      showToast('PNG downloaded!');
+    });
+  }
+
+  function downloadPDF() {
+    if (!checkLibs()) return;
+    withLoading('btnPdf', 'Generating…', async () => {
+      const canvas = await html2canvas(document.getElementById('receipt'), { scale: 2, backgroundColor: '#ffffff' });
+      const imgData = canvas.toDataURL('image/png');
+      const { jsPDF } = window.jspdf;
+      const pdfWidth = 210;
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [pdfWidth, pdfHeight] });
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`receipt-${val('receiptNo') || 'draft'}.pdf`);
+      showToast('PDF downloaded!');
+    });
+  }
+
+  function copyImage() {
+    if (!checkLibs()) return;
+    withLoading('btnCopy', 'Copying…', async () => {
+      if (!navigator.clipboard || typeof ClipboardItem === 'undefined') {
+        showToast('Copy not supported in this browser — try Download PNG.');
+        return;
+      }
+      const canvas = await html2canvas(document.getElementById('receipt'), { scale: 2, backgroundColor: '#ffffff' });
+      await new Promise((resolve, reject) => {
+        canvas.toBlob(async (blob) => {
+          if (!blob) { reject(new Error('toBlob failed')); return; }
+          try {
+            await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+            showToast('Copied to clipboard!');
+            resolve();
+          } catch (err) {
+            reject(err);
+          }
+        });
+      });
+    });
+  }
+
+  try {
+    document.getElementById('receiptDate').valueAsDate = new Date();
+  } catch (e) {
+    const d = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    document.getElementById('receiptDate').value = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
+  document.querySelectorAll('.live-input').forEach(el => el.addEventListener('input', renderPreview));
+  renderItemsForm();
+  renderPreview();
+</script>
+</body>
+</html>
